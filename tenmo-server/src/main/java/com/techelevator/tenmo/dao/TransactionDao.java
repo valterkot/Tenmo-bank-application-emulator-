@@ -8,24 +8,25 @@ import com.techelevator.tenmo.model.User;
 
 public interface TransactionDao {
 
+    List<User> getAllUsers();
+
     BigDecimal viewCurrentBalance(int user_id);
 
+    BigDecimal viewAccountBalance(int account_id);
+
+    int getAccountId (int user_id);
+
+    int createTransaction(Transaction transaction);
+
     List<Transaction> viewTransferHistory(int user_id);
-
-    boolean proceedTransaction(Transaction transaction);
-
-    boolean requestMoney(Transaction transaction); 
 
     List<Transaction> viewPendingRequests(int user_id);
 
     boolean approveRequest(Transaction transaction);
 
-    List<User> getAllUsers();
-
-    int getAccountId (int user_id);
+    boolean proceedTransaction(Transaction transaction);
 
     Transaction getTransactionById(int transfer_id);
 
-    int createTransaction(Transaction transaction);
-
+    int getUserIdByName(String name);
 }

@@ -35,15 +35,6 @@ public class ConsoleService {
         System.out.println();
     }
 
-    public void printApprovalMenu(){
-        System.out.println();
-        System.out.println("1: Approve");
-        System.out.println("2: Reject");
-        System.out.println("0: Don't approve or reject");
-        System.out.println("-----------------");
-
-    }
-
     public void printMainMenu() {
         System.out.println();
         System.out.println("1: View your current balance");
@@ -53,6 +44,15 @@ public class ConsoleService {
         System.out.println("5: Request TE bucks");
         System.out.println("0: Exit");
         System.out.println();
+    }
+    
+    public void printApprovalMenu(){
+        System.out.println();
+        System.out.println("1: Approve");
+        System.out.println("2: Reject");
+        System.out.println("0: Don't approve or reject");
+        System.out.println("-----------------");
+
     }
 
     public UserCredentials promptForCredentials() {
@@ -81,12 +81,7 @@ public class ConsoleService {
         System.out.print(prompt);
         while (true) {
             try {
-                BigDecimal input = new BigDecimal(scanner.nextLine());
-                if (input.compareTo(BigDecimal.ZERO) == 1){
-                    return input;
-                } else {
-                    System.out.print("Please enter a positive decimal number: ");
-                }
+                return new BigDecimal(scanner.nextLine());
             } catch (NumberFormatException e) {
                 System.out.println("Please enter a decimal number.");
             }
@@ -101,20 +96,5 @@ public class ConsoleService {
     public void printErrorMessage() {
         System.out.println("An error occurred. Check the log for details.");
     }
-
-
-
-    public int promptForUser(String prompt) {
-        System.out.println(prompt);
-        System.out.print("Please enter valid USER_ID from a list: ");
-        while (true) {
-            try {
-                return Integer.parseInt(scanner.nextLine());
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a number.");
-            }
-        }
-    }
-
 
 }

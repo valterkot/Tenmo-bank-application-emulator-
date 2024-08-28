@@ -106,15 +106,15 @@ public class Transaction {
         return output;
     }
 
-    public String showDetails(){
+    public void showDetails(){
         StringBuffer output = new StringBuffer(); 
-        output.append(String.format("%-6s\t"+"%-15s\t\n", "ID:", transfer_id));
+        output.append(String.format("%-6s\t"+"%-15s\t\n", "Transfer ID:", transfer_id));
         output.append(String.format("%-6s\t"+"%-15s\t\n", "From:", username_from));
         output.append(String.format("%-6s\t"+"%-15s\t\n", "To:", username_to));
-        output.append(String.format("%-6s\t"+"%-15s\t\n", "Tyoe:", TransferType.decode(transfer_type_id)));
+        output.append(String.format("%-6s\t"+"%-15s\t\n", "Type:", TransferType.decode(transfer_type_id)));
         output.append(String.format("%-6s\t"+"%-15s\t\n", "Status:", TrasnferStatus.decode(transfer_status_id)));
         output.append(String.format("%-6s\t"+"$"+"%-15s\t\n", "Amount:", amount.toString()));
 
-        return output.toString();
+        System.out.println(output.toString());
     }
 }

@@ -1,7 +1,5 @@
 package com.techelevator.tenmo.services;
 
-import java.util.List;
-
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -11,11 +9,8 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
-import com.fasterxml.jackson.databind.deser.std.NumberDeserializers.BigDecimalDeserializer;
 import com.techelevator.tenmo.model.AuthenticatedUser;
 import com.techelevator.tenmo.model.Transaction;
-import com.techelevator.tenmo.model.TransferType;
-import com.techelevator.tenmo.model.TrasnferStatus;
 import com.techelevator.tenmo.model.User;
 import com.techelevator.util.BasicLogger;
 
@@ -29,6 +24,9 @@ public class TransactionService {
 
     private String authToken = null;
     private AuthenticatedUser currentUser = null;
+
+    private final String TRANSFER_DETAILS = String.format("%-40s\n", "Transfer Details:"); 
+
 
     public TransactionService(AuthenticatedUser currentUser){
         this.currentUser = currentUser; 
@@ -44,22 +42,10 @@ public class TransactionService {
         try {
             ResponseEntity<BigDecimal> response = restTemplate.exchange(API_BASE_URL+currentUser.getUser().getId()+"/balance", HttpMethod.GET, makeAuthEntity(), BigDecimal.class);
             balance = response.getBody();
-        }        catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return balance;
-
-    }
-
-    public User[] getAvailableUsers(){
-        User[] users = null;
-        try {
-            ResponseEntity<User[]> response = restTemplate.exchange(API_BASE_URL+"allUsers", HttpMethod.GET, makeAuthEntity(), User[].class);
-            users = response.getBody();
         } catch (RestClientResponseException | ResourceAccessException e) {
             BasicLogger.log(e.getMessage());
         }
-        return users;
+        return balance;
     }
 
     public Transaction[] getPendingRequests () {
@@ -74,45 +60,6 @@ public class TransactionService {
         return pendingTransactions;
     } 
 
-     
-
-
-    public Transaction[] getTransferHistory() {
-        Transaction[] transHistory = null; 
-        try {
-            ResponseEntity<Transaction[]> response = restTemplate.exchange(API_BASE_URL+currentUser.getUser().getId()+"/transactions", HttpMethod.GET, makeAuthEntity(), Transaction[].class);
-            transHistory = response.getBody();
-        }
-        catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return transHistory;
-    }
-
-    public Transaction getTransactionById(int trans_id){
-        Transaction transaction = new Transaction(); 
-        try {
-            ResponseEntity<Transaction> response = restTemplate.exchange(API_BASE_URL+"transactions/" + trans_id, HttpMethod.GET, makeAuthEntity(), Transaction.class);
-            transaction = response.getBody();
-        }
-        catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return transaction;
-    }
-
-    public boolean makeTransfer(Transaction transaction){
-        HttpEntity<Transaction> entity = makeTransactionEntity(transaction);
-        boolean success = false;
-        try {
-            restTemplate.put(API_BASE_URL+"transactions", entity);
-            success = true;
-        } catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return success;
-    }
-
     public Transaction approveTransaction(Transaction transaction){
         HttpEntity<Transaction> entity = makeTransactionEntity(transaction);
         try {
@@ -123,20 +70,7 @@ public class TransactionService {
         return null;
     }
 
-    public Integer getAccountId(int user_id){
-        Integer account_id = null;
-        try {
-            ResponseEntity<Integer> response = restTemplate.exchange(API_BASE_URL+user_id+"/accounts", HttpMethod.GET, makeAuthEntity(), Integer.class);
-            if (response.getBody() != null) {
-                account_id = response.getBody();
-            }
-        }        
-        catch (RestClientResponseException | ResourceAccessException e) {
-            BasicLogger.log(e.getMessage());
-        }
-        return account_id;
-    }
-
+    
     private HttpEntity<Transaction> makeTransactionEntity(Transaction transaction){
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -151,4 +85,73 @@ public class TransactionService {
     }
 
 
+    public Transaction[] viewTransferHistory() {
+        Transaction[] transHistory = null; 
+        try {
+            ResponseEntity<Transaction[]> response = restTemplate.exchange(API_BASE_URL+currentUser.getUser().getId()+"/transactions", HttpMethod.GET, makeAuthEntity(), Transaction[].class);
+            transHistory = response.getBody();
+        }
+        catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return transHistory;
+    }
+
+    public User[] getUserList() {
+        User[] users = null;
+        try {
+            ResponseEntity<User[]> response = restTemplate.exchange(API_BASE_URL+"allUsers", HttpMethod.GET, makeAuthEntity(), User[].class);
+            users = response.getBody();
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return users;
+    }
+
+    public int getAccountId(int user_id) {
+        Integer account_id = null;
+        try {
+            ResponseEntity<Integer> response = restTemplate.exchange(API_BASE_URL+user_id+"/accounts", HttpMethod.GET, makeAuthEntity(), Integer.class);
+            if (response.getBody() != null) {
+                account_id = response.getBody();
+            }
+        }        
+        catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return account_id;
+    }
+
+    public void makeTransaction(Transaction transaction) {
+        HttpEntity<Transaction> entity = makeTransactionEntity(transaction);
+        Transaction newTransaction = null;
+        try {
+            newTransaction = restTemplate.postForObject(API_BASE_URL+"transactions", entity, Transaction.class);
+            if (newTransaction != null) {
+                System.out.println("\n You successfully transfered money! \n");
+                System.out.println(TRANSFER_DETAILS);
+                newTransaction.showDetails();
+            }
+        } catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+    }
+
+
+    //duplicating viewCurrentBalance, we will cut off this 
+
+    /* 
+    public BigDecimal getUserBalance() {
+        BigDecimal balance = null;
+        try {
+            // String currentUserId;
+            ResponseEntity<BigDecimal> response = restTemplate.exchange(API_BASE_URL+ currentUser.getUser().getId() +"/balance", HttpMethod.GET, makeAuthEntity(), BigDecimal.class);
+            balance = response.getBody();
+        }
+        catch (RestClientResponseException | ResourceAccessException e) {
+            BasicLogger.log(e.getMessage());
+        }
+        return balance;
+    }
+    */
 }

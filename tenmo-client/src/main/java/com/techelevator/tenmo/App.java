@@ -1,26 +1,20 @@
 package com.techelevator.tenmo;
 
-import java.math.BigDecimal;
-
-import com.fasterxml.jackson.databind.deser.std.NumberDeserializers.BigDecimalDeserializer;
-import com.techelevator.tenmo.model.AuthenticatedUser;
-import com.techelevator.tenmo.model.Transaction;
-import com.techelevator.tenmo.model.TransferType;
-import com.techelevator.tenmo.model.TrasnferStatus;
-import com.techelevator.tenmo.model.User;
-import com.techelevator.tenmo.model.UserCredentials;
+import com.techelevator.tenmo.model.*;
 import com.techelevator.tenmo.services.AuthenticationService;
 import com.techelevator.tenmo.services.ConsoleService;
 import com.techelevator.tenmo.services.TransactionService;
 
+import java.math.BigDecimal;
+
 public class App {
 
     private static final String API_BASE_URL = "http://localhost:8080/";
+    private static final String USER_LIST_HEADER = String.format("%-10s\t%-15s\t%-15s\t%-15s\n", "User ID", "Username", "Balance", "Account Type");
 
-    private final String USER_MENU_HEADER = String.format("%-10s\t%-20s\n", "USER_ID", "USER_NAME" );
     private final String TRANSFER_HISTORY_HEADER = String.format("%-10s\t%-15s\t%-15s\t%-5s\n", "Transfers_ID", "From", "To", "Amount" );
     private final String TRANSFER_DETAILS = String.format("%-40s\n", "Transfer Details:"); 
-
+    private final String USER_MENU_HEADER = String.format("%-10s\t%-20s\n", "USER_ID", "USER_NAME" );
 
     private final ConsoleService consoleService = new ConsoleService();
     private final AuthenticationService authenticationService = new AuthenticationService(API_BASE_URL);
@@ -98,146 +92,179 @@ public class App {
     }
 
 	private void viewCurrentBalance() {
-		// Thomas : 
         TransactionService transactionService = new TransactionService(currentUser); 
-        System.out.println(currentUser.getUser().getUsername()+" available balance is: " + transactionService.viewCurrentBalance());
-		
+        System.out.println(currentUser.getUser().getUsername()+"\'s available balance is: $" + transactionService.viewCurrentBalance());
+
 	}
 
 	private void viewTransferHistory() {
-		// Tony:
-        TransactionService transactionService = new TransactionService(currentUser); 
-        Transaction[] transHistory = transactionService.getTransferHistory();
-        if (transHistory!= null) {
+		TransactionService transactionService = new TransactionService(currentUser);
+        Transaction[] transHistory = transactionService.viewTransferHistory();
+        if (transHistory != null) {
             System.out.println(printHeading(TRANSFER_HISTORY_HEADER));
             for (Transaction transaction : transHistory){
                 System.out.print(transaction);
             }
-            //-----------------This needs to be work on!-------------------------------// 
-            int trans_id = consoleService.promptForInt("Please choose a transfer_id to see details or hit ENTER to exit form Transaction history menu: ");            
-            for (Transaction transaction : transHistory){
-                if (trans_id == transaction.getTransfer_id()){
-                System.out.println(printHeading(TRANSFER_DETAILS));
-                System.out.println(transaction.showDetails());
+
+            int pending_trans_id = -1; 
+            while (pending_trans_id != 0) {
+                pending_trans_id = consoleService.promptForInt("\nPlease enter transfer ID to view details (0 to cancel): ");
+                for (Transaction transaction : transactionService.viewTransferHistory()){
+                    if (pending_trans_id == transaction.getTransfer_id()){
+                        pending_trans_id = 0;
+                        System.out.println(printHeading(TRANSFER_HISTORY_HEADER));
+                        transaction.showDetails();
+                    }
+                    }
                 }
             }
-        }
         else {
-            System.out.println("No available history on user account.");
+            System.out.println("No History Available");
         }
+		
 	}
 
 	private void viewPendingRequests() {
-    //agarkov: 
         TransactionService transactionService = new TransactionService(currentUser); 
         Transaction[] pendingTransactions = transactionService.getPendingRequests();
+        BigDecimal userBalance = transactionService.viewCurrentBalance();
 
-        if (pendingTransactions != null) {
+        if (pendingTransactions.length != 0) {
             System.out.println(printHeading(TRANSFER_HISTORY_HEADER));
             for (Transaction transaction : pendingTransactions){
                 System.out.print(transaction);
             }            
-            //-----------------This needs to be work on!-------------------------------// 
-            int pending_trans_id = consoleService.promptForInt("Please enter transfer ID to approve/reject (0 to cancel): ");            
-            for (Transaction transaction : pendingTransactions){
-                if (transaction.getTransfer_id() == pending_trans_id){
-                    int choice = -1; 
-                    consoleService.printApprovalMenu();
-                    choice = consoleService.promptForInt("Please choose an option: ");
-                    if (choice == 1) {
-                        transaction.setTransfer_status_id(TrasnferStatus.APPROVED());
-                        transactionService.approveTransaction(transaction);
-                    }
-                    if (choice == 2) {
-                        transaction.setTransfer_status_id(TrasnferStatus.REJECTED());
-                        transactionService.approveTransaction(transaction);
-                    }
-                    if (choice == 0) {
-                        break;
+
+            int pending_trans_id = -1; 
+            while (pending_trans_id != 0) {
+                pending_trans_id = consoleService.promptForInt("Please enter transfer ID to approve/reject it (0 to cancel): ");
+
+                for (Transaction transaction : pendingTransactions){
+                    if (transaction.getTransfer_id() == pending_trans_id){
+                        pending_trans_id = 0;
+                        int choice = -1; 
+                        consoleService.printApprovalMenu();
+                        while (choice != 0) {
+                            choice = consoleService.promptForInt("Please choose an option: ");
+                            if (choice == 1) {
+                                if (transaction.getAmount().compareTo(userBalance) > 0) {
+                                    System.out.println("Your available balance is lower than request you want to approve...\n");
+                                }
+                                else {
+                                transaction.setTransfer_status_id(TrasnferStatus.APPROVED());
+                                transactionService.approveTransaction(transaction);
+                                break; 
+                                }
+                            }
+                            if (choice == 2) {
+                                transaction.setTransfer_status_id(TrasnferStatus.REJECTED());
+                                transactionService.approveTransaction(transaction);
+                                break; 
+                            }
+                            if (choice == 0) {
+                                continue;
+                            }
+                        }
                     }
                 }
+                if (pending_trans_id != 0) {
+                System.out.println("Incorrect input! ");
             }
+            }
+        } else {
+            System.out.println("No pending transfers! ");
         }
-
+		
 	}
 
 	private void sendBucks() {
-		// TODO Auto-generated method stub
-        TransactionService transactionService = new TransactionService(currentUser); 
-        User[] userList = transactionService.getAvailableUsers();
+        TransactionService transactionService = new TransactionService(currentUser);
+        User[] userList = transactionService.getUserList();
         BigDecimal userBalance = transactionService.viewCurrentBalance();
+        try {
+            StringBuffer prompt = new StringBuffer();
+            prompt.append(printHeading(USER_LIST_HEADER));
+            for (User user : userList) {
+                if (!currentUser.getUser().equals(user)) {
+                    prompt.append(String.format("%-10s\t%-20s\n", user.getId(), user.getUsername()));
+                }
+            }
+            prompt.append("Please enter a valid USER_ID from the list of recipients to whom you want to transfer money: ");
 
-        StringBuffer prompt = new StringBuffer();
-        prompt.append(printHeading(USER_MENU_HEADER)); 
+            boolean userSelected = false;
+            int current_user_id = currentUser.getUser().getId();
+            int beneficiary_id = -1;
 
-        for (User user : userList) {
-            if (!currentUser.getUser().equals(user)) {
-                prompt.append(String.format("%-10s\t%-20s\n", user.getId(), user.getUsername()));
+            while (userSelected != true) {
+                beneficiary_id = consoleService.promptForInt(prompt.toString()); 
+                for (User user : userList) {
+                    if (user.getId() == beneficiary_id && user.getId() != current_user_id) {  
+                        userSelected = true;
+                        BigDecimal transferAmount = consoleService.promptForBigDecimal("How much would you like to send " + user.getUsername() + "? : ");
+                        if (transferAmount.compareTo(BigDecimal.ZERO) > 0 && transferAmount.compareTo(userBalance) <= 0) {
+                            Transaction transaction = new Transaction();
+                            transaction.setAccount_from(transactionService.getAccountId(current_user_id));
+                            transaction.setAccount_to(transactionService.getAccountId(beneficiary_id));
+                            transaction.setAmount(transferAmount);
+                            transaction.setTransfer_type_id(TransferType.SEND());
+                            transaction.setTransfer_status_id(TrasnferStatus.APPROVED());
+                            transactionService.makeTransaction(transaction);
+                        }
+                        else {
+                            System.out.println("You don't have enough money for transfer or inputed number is less or equal ZERO!");
+                        }
+                    }
+                    }
+                // System.out.println("\n Requested user_id is not found!");
+                }
+            } catch (NullPointerException e) {
+                System.err.println("No available users for money transfer...");
             }
         }
-
-        boolean userSelection = false;
-        int current_user_id = currentUser.getUser().getId();
-        int beneficiar_user_id = -1;
-        
-        while (userSelection != true) {
-            beneficiar_user_id = consoleService.promptForUser(prompt.toString());
-            for (User user : userList) {
-                if (user.getId() == beneficiar_user_id && beneficiar_user_id != current_user_id) {    
-                    userSelection = true;
-                    BigDecimal transferAmount = consoleService.promptForBigDecimal("Please enter amount you want to transfer from your account to " + user.getUsername() + " : ");
-                    if (transferAmount.compareTo(userBalance) <= 0){
-                        Transaction transaction = new Transaction(); 
-                        transaction.setAccount_from(transactionService.getAccountId(current_user_id));
-                        transaction.setAccount_to(transactionService.getAccountId(beneficiar_user_id));
-                        transaction.setAmount(transferAmount);
-                        transaction.setTransfer_type_id(TransferType.SEND());
-                        transaction.setTransfer_status_id(TrasnferStatus.APPROVED());
-                        transactionService.makeTransfer(transaction);
-                    }
-                    }
-            }
-        }    
-    }
 
 	private void requestBucks() {
-		// TODO Auto-generated method stub
         TransactionService transactionService = new TransactionService(currentUser); 
-        User[] userList = transactionService.getAvailableUsers();
+        User[] userList = transactionService.getUserList();
         StringBuffer prompt = new StringBuffer();
-
-        prompt.append(printHeading(USER_MENU_HEADER)); 
-        for (User user : userList) {
-            if (!currentUser.getUser().equals(user)) {
-                prompt.append(String.format("%-10s\t%-20s\n", user.getId(), user.getUsername()));
-            }
-        }
-
-        boolean userSelection = false;
-        int requestor_user_id = currentUser.getUser().getId();
-        int sender_user_id = -1;
-        while (userSelection != true) {
-            sender_user_id = consoleService.promptForUser(prompt.toString());
+        prompt.append(printHeading(USER_MENU_HEADER));
+        try {
             for (User user : userList) {
-                if (user.getId() == sender_user_id && sender_user_id != requestor_user_id) {    
-                    userSelection = true;
-                    BigDecimal transferAmount = consoleService.promptForBigDecimal("Enter ID of user you are requesting from " + user.getUsername() + " (0 to cancel) : ");
-                    if (transferAmount.compareTo(BigDecimal.ZERO) == 1){
-                        Transaction transaction = new Transaction(); 
-                        transaction.setAccount_from(transactionService.getAccountId(requestor_user_id));
-                        transaction.setAccount_to(transactionService.getAccountId(sender_user_id));
-                        transaction.setAmount(transferAmount);
-                        transaction.setTransfer_type_id(TransferType.REQUEST());
-                        transaction.setTransfer_status_id(TrasnferStatus.PENDING());
-                        transactionService.makeTransfer(transaction);
-                    }
-                    }
+                if (!currentUser.getUser().equals(user)) {
+                    prompt.append(String.format("%-10s\t%-20s\n", user.getId(), user.getUsername()));
+                }
             }
-        }    
+            prompt.append("Please enter a valid USER_ID from the list of sender you requesting money: ");
 
+            boolean userSelected = false;
+            int requestor_user_id = currentUser.getUser().getId();
+            int sender_user_id = -1;
+            while (userSelected != true) {
+                sender_user_id = consoleService.promptForInt(prompt.toString());
+                for (User user : userList) {
+                    if (user.getId() == sender_user_id && sender_user_id != requestor_user_id) {    
+                        userSelected = true;
+                        BigDecimal transferAmount = consoleService.promptForBigDecimal("How much would you like to request from " + user.getUsername() + "? (0 to cancel) : ");
+                        if (transferAmount.compareTo(BigDecimal.ZERO) == 1){
+                            Transaction transaction = new Transaction(); 
+                            transaction.setAccount_from(transactionService.getAccountId(requestor_user_id));
+                            transaction.setAccount_to(transactionService.getAccountId(sender_user_id));
+                            transaction.setAmount(transferAmount);
+                            transaction.setTransfer_type_id(TransferType.REQUEST());
+                            transaction.setTransfer_status_id(TrasnferStatus.PENDING());
+                            transactionService.makeTransaction(transaction);
+                        }
+                        else {
+                            System.out.println("You entered incorrect amount, please try again later.");
+                        }
+                        }
+                }
+            }    	
+        } catch (NullPointerException e) {
+            System.err.println("No available users for money transfer...");
+        } 	
+	}
 
-    }
-
+//Helper method to create header with underscores:
     private String printHeading(String headingText) {
         StringBuffer header = new StringBuffer();
         for (int i = 0; i < headingText.length(); i++) {

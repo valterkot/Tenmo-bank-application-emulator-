@@ -30,8 +30,9 @@ import com.techelevator.tenmo.security.jwt.TokenProvider;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.security.Principal;
 import java.util.List;
- 
+
 
 /**
  * Controller to work with transactions.
@@ -46,17 +47,27 @@ public class TransactionController {
         this.transactionDao = transactionDao;
     }
 
+    // VIEW CURRENT BALANCE... 
     @RequestMapping(path = "/{user_id}/balance", method = RequestMethod.GET)
-    public BigDecimal viewCurrentBalance (@PathVariable int user_id){
-        return transactionDao.viewCurrentBalance(user_id);
+    public BigDecimal viewCurrentBalance (@PathVariable int user_id, Principal principal){
+        int authUser = transactionDao.getUserIdByName(principal.getName());
+        return transactionDao.viewCurrentBalance(authUser);
     } 
 
+    // GET LIST WITH ALL REGISTERED USERS
     @RequestMapping(path = "/allUsers", method = RequestMethod.GET)
     public List<User> getAllUsers(){
         return transactionDao.getAllUsers();
     }
 
-    @RequestMapping(path =  "/transactions", method = RequestMethod.PUT)
+    // GET ACCOUNT_ID BY USER_ID
+    @RequestMapping(path =  "/{user_id}/accounts", method = RequestMethod.GET)
+    public int getAccountId(@PathVariable int user_id){
+        return transactionDao.getAccountId(user_id);
+    }
+
+    // PROCEED NEW TRANSACTION  
+    @RequestMapping(path =  "/transactions", method = RequestMethod.POST)
     public Transaction newTransaction(@RequestBody Transaction transaction){
         if (transaction.getTransfer_type_id() == TransferType.SEND()){
             if (transactionDao.proceedTransaction(transaction)){
@@ -73,11 +84,7 @@ public class TransactionController {
         }
     }
 
-    @RequestMapping(path =  "/{user_id}/accounts", method = RequestMethod.GET)
-    public int getAccountId(@PathVariable int user_id){
-        return transactionDao.getAccountId(user_id);
-    }
-
+    // RETURN TRANSACTIONS BY USER_ID
     @RequestMapping(path = "/{user_id}/transactions", method = RequestMethod.GET)
     public List<Transaction> viewTransactions(@PathVariable int user_id){
         return transactionDao.viewTransferHistory(user_id);
@@ -87,13 +94,7 @@ public class TransactionController {
     public List<Transaction> viewPendingRequests(@PathVariable int user_id){
         return transactionDao.viewPendingRequests(user_id);
     }
-
-
-    @RequestMapping(path = "/transactions/{transfer_id}", method = RequestMethod.GET)
-    public Transaction viewTransactionDetails(@PathVariable int transfer_id) {
-        return transactionDao.getTransactionById(transfer_id);
-    }
-
+    
     @RequestMapping(path =  "/transactions/{transfer_id}", method = RequestMethod.PUT)
     public Transaction changeStatus(@PathVariable int transfer_id, @RequestBody Transaction transaction){
         if (transaction.getTransfer_status_id() != TrasnferStatus.PENDING()){
@@ -106,4 +107,6 @@ public class TransactionController {
             return null;
         }
     }
+
+
 }

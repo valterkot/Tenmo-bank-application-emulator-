@@ -2,20 +2,28 @@ package com.techelevator.tenmo.model;
 
 import java.math.BigDecimal;
 
+import javax.validation.constraints.NotEmpty;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Positive;
+
 public class Transaction {
 
     private int transfer_id;
     private int transfer_type_id; 
     private int transfer_status_id;
     private int account_from; 
-    private int account_to; 
+    private int account_to;
+    @NotNull 
+    @Positive
     private BigDecimal amount;
+
 
     //adding new properties to represent account's holder
     private int user_id_from;
     private int user_id_to; 
     private String username_from;
     private String username_to; 
+    
     
     public int getUser_id_from() {
         return user_id_from;
@@ -62,6 +70,7 @@ public class Transaction {
     public Transaction(){
         
     }
+
 
     public int getTransfer_id() {
         return transfer_id;
